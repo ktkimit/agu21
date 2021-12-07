@@ -173,9 +173,9 @@
     \end{itemize}
   \end{block}
 
-  \begin{block}{MCMC method is computationally prohibitive (for
-    high-dimensional parameter and state spaces after discretization):}
+  \begin{block}{MCMC method is computationally prohibitive because:}
     \begin{itemize}
+      \item Parameter and state spaces are high-dimension after discretization
       \item Requires repeated evaluations of expensive-to-solve large-scale PDE models
       \item Samples are autocorrelated $\rightarrow$ poor estimation of the
         posterior
@@ -184,6 +184,187 @@
     \end{itemize}
   \end{block}
 \end{frame}
+
+\begin{frame}
+  \frametitle{Parameter space dimension reduction}
+  \framesubtitle{Likelihood-informed-subspace (LIS)}
+
+  \setlength{\leftmargini}{8pt}
+  \begin{itemize}
+    \item Ill-posed inverse problem: data provide only sparse information on
+      the parameter space
+    \item Construct a parameter subspace $\boldsymbol{\Phi} =
+      [\boldsymbol{\phi}_1, \ldots, \boldsymbol{\phi}_p]$ where the data are
+      most “informative” relative to the prior: the dominant eigenvectors of
+      the eigensystem
+      \[
+        \mathbf{H}_\text{like} \boldsymbol{\phi}_i = \lambda_i
+        \boldsymbol{\Gamma}_\text{prior}^{-1} \boldsymbol{\phi}_i.
+      \]
+    \item With corresponding basis $\boldsymbol{\Phi}$ and projector $\mathcal{P}_r$, decompose
+      \begin{eqnarray*}
+        \mathbf{m} & = & \underbrace{ \mathcal{P}_r \, \mathbf{m}
+        }_{\frac{Constrained\;by\;likelihood}{Low\;dimensional,\;non\;Gaussian}}
+        + \underbrace{ (I - \mathcal{P}_r) \,
+        \mathbf{m}}_{\frac{Independent\;of\;data}{High\;dimensional,\;known\;analytically}}
+        \\ & = & \hspace{3.5em} \boldsymbol{\Phi} \mathbf{m}_r \hspace{2.5em} +
+        \hspace{3.5em} \mathbf{m}_\perp
+      \end{eqnarray*}
+    \item Approximate posterior $\pi_\text{post}(\mathbf{m}|\mathbf{d}) \propto$
+      \[
+        \pi_\text{like}(\mathbf{d}|\mathbf{m}) \pi_\text{prior}(\mathbf{m})
+        \approx {\color{red} \underbrace{ \pi_\text{like}\left(\mathbf{d}  \mid
+            \boldsymbol{\Phi} \mathbf{m}_r \right)
+            \pi_\text{prior}(\mathbf{m}_r)}_{parameter-reduced \; posterior \;
+          \tilde{\pi}_{post}(\mathbf{m}_r | \mathbf{d})}} \quad {\color{blue}
+        \underbrace{\pi_\text{prior}(\mathbf{m}_\perp)}_{complement \;
+      prior}}
+      \]
+
+  \end{itemize}
+
+  \begin{itemize}
+    \tiny
+    \item[] Details in: T. Cui, Y. Marzouk and K. Willcox, Journal of
+          Computational Physics, 2016.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}
+  \frametitle{State space dimension reduction}
+  \framesubtitle{Proper orthogonal decomposition(POD)}
+
+  Consider Newton system at iteration $k$ for solving the forward PDE model:
+  \[
+    \mathbf{K}(\mathbf{m}_k; \mathbf{u}_k) \delta \mathbf{u} = - \mathbf{g}
+    (\mathbf{m}_k; \mathbf{u}_k)
+  \]
+  \vspace{-0.5cm}
+  \begin{itemize}
+    \item $\mathbf{K}(\mathbf{m}_k; \mathbf{u}_k)$: discrete form of the gradient of the weak form
+    \item $\mathbf{g} (\mathbf{m}_k; \mathbf{u}_k)$: discrete form of the weak
+      form
+  \end{itemize}
+
+  \begin{block}{Proper orthogonal decomposition (POD):}
+    \begin{itemize}
+      \item Sample parameters to generate state snapshots
+        $\{\mathbf{u}(\mathbf{m}^1), \ldots, \mathbf{u}(\mathbf{m}^s)\}$
+      \item Compute POD basis $\mathbf{U} \in \mathbb{R}^{N \times n} (n \ll N)$ that minimizes
+        \[
+          \min_{\mathbf{U}} \sum_{i=1}^{s} \|\mathbf{u}(\mathbf{m}^i) -
+          \mathbf{U}\mathbf{U}^T\mathbf{u}(\mathbf{m}^i)\|_2^2
+        \]
+      \item Project the Newton system onto $\mathbf{U}$ and perform the iteration on the projected system.
+
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}
+  \frametitle{State space dimension reduction}
+  \framesubtitle{Discrete empirical interpolation method (DEIM)}
+
+  \begin{block}{POD-projected Newton system:}
+    \[
+      \mathbf{U}^T
+      \mathbf{K}(\mathbf{m}_k; \mathbf{U} \mathbf{x}_k)
+      \mathbf{U} \delta \mathbf{x}
+      = -
+      \mathbf{U}^T \mathbf{g} (\mathbf{m}_k; \mathbf{U} \mathbf{x}_k)
+    \]
+    \vspace{-0.5cm}
+    \begin{itemize}
+      \item $\mathbf{K}$ and $\mathbf{g}$ depend on the state (also the
+        parameter)! $\rightarrow$ projection required in every step (and for
+        different values of $\mathbf{m}$)
+    \end{itemize}
+  \end{block}
+
+
+  \begin{block}{Discrete empirical interpolation method:}
+    \begin{itemize}
+      \item Decompose $\mathbf{g} = \mathbf{g}_\text{linear} +
+        \mathbf{g}_\text{nonlinear}$
+      \item Compute a set of snapshots $\mathbf{g}_\text{nonlinear}^1, \ldots,
+        \mathbf{g}_\text{nonlinear}^s$
+      \item Construct the POD basis of the snapshots $\mathbf{Z} \in
+        \mathbb{R}^{N \times m}, m \ll N$
+      \item Approximate $\mathbf{g}_\text{nonlinear} \approx \mathbf{Z}
+        \textcolor{red}{(\mathbf{P}^T \mathbf{Z})^{-1} \mathbf{P}^T
+        \mathbf{r}_\text{nonlinear}}$ ($\mathbf{P}^T \mathbf{g}_\text{nonlinear}
+        = \mathbf{P}^T \mathbf{Z} \textcolor{red}{\mathbf{c}}$); $\mathbf{P}^T \in \mathbb{R}^{m \times
+        N}$ is a permutation matrix
+    \end{itemize}
+
+    \begin{itemize}
+      \item[] \scriptsize{Details in: S. Chaturantabut and D.C. Sorensen, SIAM J.
+        Sci. Comput., 2010}
+    \end{itemize}
+  \end{block} 
+\end{frame}
+
+\begin{frame}
+  \frametitle{State space dimension reduction}
+  \framesubtitle{POD-DEIM}
+
+  \begin{block}{POD-DEIM reduced Newton system:}
+    \[
+      \left(\textcolor{blue}{\mathbf{A}}
+      + \hat{\mathbf{A}}\right) \tilde{\mathbf{x}}
+      = \textcolor{blue}{\mathbf{b}}
+      + \hat{\mathbf{b}}
+    \]
+    where
+    \begin{align*}
+      \textcolor{blue}{\mathbf{A}} &=
+      \textcolor{blue}
+      {
+      \mathbf{U}^T
+      \mathbf{K}_\text{linear}
+      \mathbf{U}
+      },
+      \quad
+      \textcolor{blue}{\mathbf{b}} =
+      \textcolor{blue}{
+      \mathbf{U}^T \mathbf{g}_\text{linear} }
+      \\
+      \hat{\mathbf{A}} &=
+      \textcolor{red}{
+      \mathbf{U}^T
+      \mathbf{Z} (\mathbf{P}^T \mathbf{Z})^{-1}
+      }
+      \mathbf{P}^T
+      \mathbf{K}_\text{nonlinear}
+      \mathbf{U}
+      \\
+      \hat{\mathbf{b}} &=
+      \textcolor{red}{
+     \mathbf{U}^T \mathbf{Z} (\mathbf{P}^T \mathbf{Z})^{-1}
+      }
+     \mathbf{P}^T
+      \mathbf{g}_\text{nonlinear}
+    \end{align*}
+  \end{block}
+
+  \vspace{0.3cm}
+
+  \begin{itemize}
+    \item Offline: $\textcolor{blue}{\text{linear parts}} \in \mathbb{R}^{n
+      \times n}, \mathbb{R}^{n \times 1}$, $\textcolor{red}{\mathbf{U}^T \mathbf{Z} (\mathbf{P}^T
+    \mathbf{Z})^{-1}} \in \mathbb{R}^{n \times m}$
+  \item Online: only $m$ selected rows computed (by the permutation matrix $\mathbf{P}^T$)
+  \item Much less computational complexity ($\mathcal{O}(\kappa N)
+    \rightarrow \mathcal{O}(n^3 + mn^2)$)
+  \end{itemize}
+
+  \begin{itemize}
+    \item[] \scriptsize{Details in: S. Chaturantabut and D.C. Sorensen, SIAM J.
+      Sci. Comput., 2010}
+  \end{itemize}
+
+\end{frame}
+
 
 \begin{frame}
   \frametitle{Jointly-reduced Bayesian inversion approach}
